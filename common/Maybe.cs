@@ -1,9 +1,10 @@
 using System;
 
-namespace FP {
-    using static MaybeBuilders;
+namespace FP.Common
+{
+  using static Helpers;
 
-    public abstract class Maybe<A> {
+  public abstract class Maybe<A> {
         virtual public A Value =>
         throw new NotImplementedException ();
 
@@ -19,13 +20,6 @@ namespace FP {
 
     public class Nothing<A> : Maybe<A> {
         public Nothing (A value) { }
-    }
-
-    public static class MaybeBuilders {
-        public static Maybe<A> Just<A> (A a) => new Just<A> (a);
-        public static Maybe<A> Nothing<A> () => new Nothing<A> (default (A));
-
-        public static Maybe<A> ToJust<A> (this A a) => new Just<A> (a);
     }
 
     public static class MaybeExtensions {

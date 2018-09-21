@@ -1,7 +1,8 @@
 ﻿using System;
+using FP.Common;
 
-namespace FP {
-    using static FP.MaybeBuilders;
+namespace FP.Presentation {
+    using static Helpers;
 
     class Program {
 

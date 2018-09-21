@@ -3,10 +3,10 @@ using System.Collections.Generic;
 using System.Data.Common;
 using System.Linq;
 using Npgsql;
-using static FP.MaybeBuilders;
-using static FP.Reader;
+using FP.Common;
 
-namespace FP.Repositories {
+namespace FP.Demo {
+  using static Helpers;
 
   public class UserService {
 

@@ -1,12 +1,8 @@
 using System;
 
-namespace FP {
+namespace FP.Common {
 
     public delegate A Reader<E, A> (E e);
-
-    public static class Reader {
-        public static Reader<E, E> Ask<E> () => new Reader<E, E> (e => e);
-    }
 
     public static class ReaderExtensions {
 
