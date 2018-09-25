@@ -2,19 +2,16 @@ using System;
 using System.Collections.Generic;
 using System.Data.Common;
 using System.Linq;
-using Npgsql;
 using FP.Common;
+using Npgsql;
 
 namespace FP.Demo.Repositories {
   using static Helpers;
 
-  class UserRepo : IUserRepo {
+  static class RepoHelpers {
 
-    private Dictionary<String, String> reader2dic (DbDataReader reader) =>
-      Enumerable.Range (0, reader.FieldCount).ToDictionary (reader.GetName, x => (string) reader.GetValue (x));
-
-    public User reader2user (DbDataReader reader) {
-      var dic = reader2dic (reader);
+    public static User ToUser (this DbDataReader reader) {
+      var dic = Enumerable.Range (0, reader.FieldCount).ToDictionary (reader.GetName, x => reader.GetValue (x) as String);
       return new User {
         Id = dic["user_id"],
           Email = dic["user_email"],
@@ -22,40 +19,54 @@ namespace FP.Demo.Repositories {
       };
     }
 
-    public Reader<Env, Maybe<User>> GetById (string id) => e => {
-      var sql = "select from users where user_id = @id";
-      using (var cmd = new NpgsqlCommand (sql, e.Connection)) {
-        cmd.Parameters.AddWithValue ("id", id);
-        using (var reader = cmd.ExecuteReader ()) {
-          if (!reader.Read ()) return Nothing<User> ();
-          return reader2user (reader).ToJust ();
-        }
+    public static T RunDb<T> (this Env e, Func<NpgsqlCommand, T> f) {
+      using (var conn = new NpgsqlConnection (e.ConnectionString))
+      using (var cmd = new NpgsqlCommand ()) {
+        conn.Open ();
+        cmd.Connection = conn;
+        var ret = f (cmd);
+        // Console.WriteLine($"Trace: {f.Method.Name} {cmd.CommandText}");
+        // cmd.Parameters.ToList().ForEach(p => Console.WriteLine(p.ParameterName + " = " + p.NpgsqlValue));
+        return ret;
       }
-    };
-
-    public Reader<Env, Maybe<User>> GetByEmail (string email) => e => {
-      var sql = "select from users where user_email = @email";
-      using (var cmd = new NpgsqlCommand (sql, e.Connection)) {
-        cmd.Parameters.AddWithValue ("email", email);
-        using (var reader = cmd.ExecuteReader ()) {
-          if (!reader.Read ()) return Nothing<User> ();
-          return reader2user (reader).ToJust ();
-        }
-      }
-    };
-
-    public Reader<Env, User> Create (Maybe<String> id, string email, string password) => e => {
-      var sql = "insert into users(user_id, user_email, user_password) values((@id, @email, @password))";
-      using (var cmd = new NpgsqlCommand (sql, e.Connection)) {
-        var userId = id.GetOrElse (Guid.NewGuid ().ToString ());
-        cmd.Parameters.AddWithValue ("id", userId);
-        cmd.Parameters.AddWithValue ("email", email);
-        cmd.Parameters.AddWithValue ("password", password);
-        cmd.ExecuteNonQuery ();
-        return new User { Id = userId, Email = email, Password = password };
-      }
-    };
-
+    }
   }
 
+  class UserRepo : IUserRepo {
+
+    public Reader<Env, Maybe<User>> GetById (string id) => e => e.RunDb (cmd => {
+      cmd.CommandText = "select * from users where user_id = @id";
+      cmd.Parameters.AddWithValue ("id", id);
+      using (var reader = cmd.ExecuteReader ()) 
+        return reader.Read() ? reader.ToUser ().ToJust () : Nothing<User>();
+    });
+
+    public Reader<Env, Maybe<User>> GetByEmail (string email) => e => e.RunDb (cmd => {
+      cmd.CommandText = "select * from users where user_email = @email";
+      cmd.Parameters.AddWithValue ("email", email);
+      using (var reader = cmd.ExecuteReader ()) 
+        return reader.Read() ? reader.ToUser ().ToJust () : Nothing<User>();
+    });
+
+    public Reader<Env, User> Update (string id, string email, string password) => e => e.RunDb (cmd => {
+      cmd.CommandText = "update users set user_email=@email, user_password=@pass where user_id=@id";
+      cmd.Parameters.AddWithValue ("id", id);
+      cmd.Parameters.AddWithValue ("email", email);
+      cmd.Parameters.AddWithValue ("pass", password);
+      cmd.ExecuteNonQuery ();
+      return new User { Id = id, Email = email, Password = password };
+    });
+
+    public Reader<Env, User> Create (string email, string password) => e => e.RunDb (cmd => {
+      var userId = Guid.NewGuid ().ToString ();
+      cmd.CommandText = "insert into users(user_id, user_email, user_password) values(@id, @email, @pass)";
+      cmd.Parameters.AddWithValue ("id", userId);
+      cmd.Parameters.AddWithValue ("email", email);
+      cmd.Parameters.AddWithValue ("pass", password);
+      cmd.ExecuteNonQuery ();
+
+      return new User { Id = userId, Email = email, Password = password };
+    });
+
+  }
 }

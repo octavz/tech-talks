@@ -1,14 +1,14 @@
 using System;
 
-namespace FP.Common
-{
-  using static Helpers;
+namespace FP.Common {
+    using static Helpers;
 
-  public abstract class Maybe<A> {
+    public abstract class Maybe<A> {
         virtual public A Value =>
         throw new NotImplementedException ();
 
-        public A GetOrElse(A d) => (this is Nothing<A>)  ? d : Value;
+        public A GetOrElse (Func<A> d) => (this is Nothing<A>) ? d() : Value;
+        public A GetOrElse (A d) => (this is Nothing<A>) ? d : Value;
     }
 
     public class Just<A> : Maybe<A> {
@@ -27,7 +27,11 @@ namespace FP.Common
         public static Maybe<B> Select<A, B> (this Maybe<A> maybeA, Func<A, B> fab) =>
             (maybeA is Nothing<A>) ? Nothing<B> () : fab (maybeA.Value).ToJust ();
 
-        public static Maybe<C> SelectMany<A, B, C> (this Maybe<A> ma, Func<A, Maybe<B>> f, Func<A, B, C> select) {
+        public static Maybe<C> SelectMany<A, B, C> (
+            this Maybe<A> ma,
+            Func<A, Maybe<B>> f,
+            Func<A, B, C> select) {
+
             switch (ma) {
                 case Just<A> justA:
                     switch (f (justA.Value)) {

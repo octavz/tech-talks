@@ -6,6 +6,8 @@ namespace FP.Common {
 
     public static class ReaderExtensions {
 
+        public static Reader<E, A> Pure<E,A>(this A v) => new Reader<E,A>(e => v);
+
         // m a -> (a -> m b) -> m b
         public static Reader<E, C> SelectMany<E, A, B, C> (
             this Reader<E, A> readerA,

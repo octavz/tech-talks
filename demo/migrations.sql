@@ -5,7 +5,7 @@ CREATE DATABASE fp;
 CREATE TABLE users
 (
     user_id character varying(250) primary key,
-    user_email character varying(250),
+    user_email character varying(250) unique,
     user_password character varying(250)
 );
 
